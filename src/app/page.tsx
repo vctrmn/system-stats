@@ -7,8 +7,6 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-      <h1 className="text-3xl font-bold mb-6 text-foreground">Raspberry Pi</h1>
-
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>System Information</CardTitle>
@@ -19,7 +17,7 @@ export default async function Home() {
               ["Hostname", systemInfo.os.hostname()],
               ["Platform", systemInfo.os.platform()],
               ["Architecture", systemInfo.os.arch()],
-              ["CPU Temperature", `${systemInfo.cpuTemp.toFixed(1)}°C`],
+              ["CPU Temperature", `${(systemInfo.cpuTemp ?? 0).toFixed(1)}°C`],
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{label}:</span>

@@ -14,9 +14,28 @@ function getCpuUsage() {
 }
 
 async function getCpuTemp() {
-  const { stdout } = await execAsync("vcgencmd measure_temp");
-  // in celsius! OBVIOUSLY!
-  return parseFloat(stdout.replace("temp=", "").replace("'C", ""));
+  try {
+    const platform = os.platform();
+    
+    if (platform === 'darwin') {  // macOS
+      const { stdout } = await execAsync("sudo powermetrics --samplers smc -i1 -n1");
+      const match = stdout.match(/CPU die temperature: (\d+\.\d+)/);
+      if (match && match[1]) {
+        return parseFloat(match[1]);
+      }
+      throw new Error("Could not parse CPU temperature");
+    } 
+    else if (platform === 'linux') {  // Raspberry Pi
+      const { stdout } = await execAsync("vcgencmd measure_temp");
+      return parseFloat(stdout.replace("temp=", "").replace("'C", ""));
+    }
+    else {
+      throw new Error(`CPU temperature reading not supported on ${platform}`);
+    }
+  } catch (error) {
+    console.error("Error reading CPU temperature:", error);
+    return null;  // Return null if temperature cannot be read
+  }
 }
 
 function bytesToGB(bytes: number) {
@@ -35,7 +54,11 @@ export async function getSystemDetails() {
   const cpuTemp = await getCpuTemp();
 
   return {
-    os,
+    os: {
+      hostname: os.hostname,
+      platform: os.platform,
+      arch: os.arch,
+    },
     cpuTemp,
     cpuUsage,
     memoryUsage: {
