@@ -16,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
           cache: "npm"
 
       - name: Install dependencies
@@ -32,7 +32,18 @@ jobs:
             package.json \
             package-lock.json \
             next.config.js \
-            public/
+            public/ \
+            app-build-manifest.json \
+            build-manifest.json \
+            export-marker.json \
+            images-manifest.json \
+            next-minimal-server.js.nft.json \
+            next.server.js.nft.json \
+            package.json \
+            prerender-manifest.json \
+            react-loadable-manifest.json \
+            required-server-files.json \
+            routes-manifest.json
 
       - name: Create Release
         id: create_release
@@ -44,7 +55,7 @@ jobs:
             Release ${{ github.ref_name }}
 
             To deploy on your Raspberry Pi:
-            1. Download and extract the release.tar.gz
+            1. Download and extract release.tar.gz
             2. Run `npm ci --production`
             3. Run `npm start`
           draft: false
