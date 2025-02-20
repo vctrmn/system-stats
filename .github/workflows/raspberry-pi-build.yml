@@ -71,7 +71,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: release.tar.gz
-          name: Release ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           body: |
             Release ${{ github.ref_name }}
 
