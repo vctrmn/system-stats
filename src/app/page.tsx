@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Loader2 } from "lucide-react";
 
 interface SystemInfo {
   os: {
@@ -22,6 +23,7 @@ interface SystemInfo {
 export default function Home() {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -34,38 +36,51 @@ export default function Home() {
         setSystemInfo(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 5000); // Update every 5 seconds
-
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  if (error) {
-    return (
-      <main className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6">
-            <div className="text-red-500">Error: {error}</div>
-          </CardContent>
-        </Card>
-      </main>
-    );
-  }
+  const LoadingCard = () => (
+    <Card className="w-full max-w-md">
+      <CardContent className="p-6 min-h-[400px] flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Loading system information...</p>
+      </CardContent>
+    </Card>
+  );
 
-  if (!systemInfo) {
-    return (
-      <main className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6">
-            <div>Loading system information...</div>
-          </CardContent>
-        </Card>
-      </main>
-    );
-  }
+  const ErrorCard = ({ message }: { message: string }) => (
+    <Card className="w-full max-w-md">
+      <CardContent className="p-6">
+        <div className="flex items-center space-x-2 text-red-500">
+          <svg
+            className="h-6 w-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span>Error: {message}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  if (isLoading) return <main className="min-h-screen bg-background flex flex-col items-center justify-center p-6"><LoadingCard /></main>;
+  if (error) return <main className="min-h-screen bg-background flex flex-col items-center justify-center p-6"><ErrorCard message={error} /></main>;
+  if (!systemInfo) return null;
 
   return (
     <main className="min-h-screen bg-background flex flex-col items-center justify-center p-6">

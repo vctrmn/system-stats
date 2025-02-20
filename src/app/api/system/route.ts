@@ -1,3 +1,4 @@
+// route.ts
 import { NextResponse } from 'next/server';
 import os from "os";
 import { exec } from "child_process";
@@ -15,12 +16,36 @@ function getCpuUsage() {
 }
 
 async function getCpuTemp() {
+  const platform = os.platform();
+  
   try {
-    const { stdout } = await execAsync("cat /sys/class/thermal/thermal_zone0/temp");
-    // Convert millidegrees to degrees
-    return parseFloat(stdout) / 1000;
+    if (platform === 'darwin') {
+      // For MacOS (Intel and Apple Silicon)
+      const { stdout } = await execAsync("sudo powermetrics --samplers smc -i1 -n1");
+      const match = stdout.match(/CPU die temperature: (\d+\.\d+)/);
+      return match ? parseFloat(match[1]) : null;
+    } else if (platform === 'linux') {
+      // For Raspberry Pi and other Linux systems
+      try {
+        // Try Raspberry Pi temperature file first
+        const { stdout } = await execAsync("cat /sys/class/thermal/thermal_zone0/temp");
+        return parseFloat(stdout) / 1000;
+      } catch {
+        // Fallback to alternative temperature sources
+        try {
+          const { stdout } = await execAsync("sensors -j");
+          const data = JSON.parse(stdout);
+          // This will need to be adjusted based on your specific hardware
+          const temp = data[Object.keys(data)[0]]?.["temp1"]?.["temp1_input"];
+          return temp || null;
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
   } catch (error) {
-    console.error('Could not read Raspberry Pi temperature:', error);
+    console.error('Could not read CPU temperature:', error);
     return null;
   }
 }
@@ -31,14 +56,10 @@ function bytesToGB(bytes: number) {
 
 export async function GET() {
   try {
-    // Get CPU usage
     const cpuUsage = getCpuUsage();
-
-    // Get memory info
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
     const usedMem = totalMem - freeMem;
-    
     const cpuTemp = await getCpuTemp();
 
     const systemInfo = {

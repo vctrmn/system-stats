@@ -59,7 +59,6 @@ jobs:
                ```
 
             Requirements:
-            - Node.js 20 or later
-            - Access to /sys/class/thermal/thermal_zone0/temp for temperature monitoring
+            - Node.js 18 or later
           draft: false
           prerelease: false
