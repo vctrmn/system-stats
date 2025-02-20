@@ -1,52 +1,72 @@
-name: Build for Raspberry Pi
+name: Build & Create Release for Raspberry Pi
 
 on:
   push:
     tags:
-      - "v*" # Trigger on version tags like v1.0.0
+      - "v*" # Trigger on version tags
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write # Needed for creating releases
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "release"
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Detect package manager
+        id: detect-package-manager
+        run: |
+          if [ -f "${{ github.workspace }}/yarn.lock" ]; then
+            echo "manager=yarn" >> $GITHUB_OUTPUT
+            echo "command=install" >> $GITHUB_OUTPUT
+            echo "runner=yarn" >> $GITHUB_OUTPUT
+            exit 0
+          elif [ -f "${{ github.workspace }}/package.json" ]; then
+            echo "manager=npm" >> $GITHUB_OUTPUT
+            echo "command=ci" >> $GITHUB_OUTPUT
+            echo "runner=npx --no-install" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo "Unable to determine package manager"
+            exit 1
+          fi
+
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: ${{ steps.detect-package-manager.outputs.manager }}
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-
 
       - name: Install dependencies
-        run: npm ci
+        run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
 
-      - name: Build application
-        run: npm run build
+      - name: Build with Next.js
+        run: ${{ steps.detect-package-manager.outputs.runner }} next build
 
-      - name: Package build files
+      - name: Package release
         run: |
-          tar -czf release.tar.gz \
-            .next/ \
-            package.json \
-            package-lock.json \
-            next.config.js \
-            public/ \
-            app-build-manifest.json \
-            build-manifest.json \
-            export-marker.json \
-            images-manifest.json \
-            next-minimal-server.js.nft.json \
-            next.server.js.nft.json \
-            package.json \
-            prerender-manifest.json \
-            react-loadable-manifest.json \
-            required-server-files.json \
-            routes-manifest.json
+          cd out
+          tar -czf ../release.tar.gz .
 
       - name: Create Release
-        id: create_release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
           files: release.tar.gz
@@ -55,10 +75,18 @@ jobs:
             Release ${{ github.ref_name }}
 
             To deploy on your Raspberry Pi:
-            1. Download and extract release.tar.gz
-            2. Run `npm ci --production`
-            3. Run `npm start`
+            1. Create a new directory and extract release.tar.gz into it
+            2. Install serve or similar static file server:
+               ```bash
+               npm install -g serve
+               ```
+            3. Run the server:
+               ```bash
+               serve -p 3000
+               ```
+
+            Requirements:
+            - Node.js 20 or later
+            - For temperature monitoring: `sudo apt-get install libraspberrypi-bin`
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
