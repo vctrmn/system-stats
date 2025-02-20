@@ -14,27 +14,39 @@ function getCpuUsage() {
 }
 
 async function getCpuTemp() {
+  // During build time or if we can't access hardware, return null
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
   try {
     const platform = os.platform();
     
     if (platform === 'darwin') {  // macOS
-      const { stdout } = await execAsync("sudo powermetrics --samplers smc -i1 -n1");
-      const match = stdout.match(/CPU die temperature: (\d+\.\d+)/);
-      if (match && match[1]) {
-        return parseFloat(match[1]);
+      try {
+        const { stdout } = await execAsync("sudo powermetrics --samplers smc -i1 -n1");
+        const match = stdout.match(/CPU die temperature: (\d+\.\d+)/);
+        if (match && match[1]) {
+          return parseFloat(match[1]);
+        }
+      } catch (error) {
+        console.debug('Could not read macOS temperature:', error);
+        return null;
       }
-      throw new Error("Could not parse CPU temperature");
     } 
     else if (platform === 'linux') {  // Raspberry Pi
-      const { stdout } = await execAsync("vcgencmd measure_temp");
-      return parseFloat(stdout.replace("temp=", "").replace("'C", ""));
+      try {
+        const { stdout } = await execAsync("vcgencmd measure_temp");
+        return parseFloat(stdout.replace("temp=", "").replace("'C", ""));
+      } catch (error) {
+        console.debug('Could not read Raspberry Pi temperature:', error);
+        return null;
+      }
     }
-    else {
-      throw new Error(`CPU temperature reading not supported on ${platform}`);
-    }
+    return null;
   } catch (error) {
-    console.error("Error reading CPU temperature:", error);
-    return null;  // Return null if temperature cannot be read
+    console.debug("Error reading CPU temperature:", error);
+    return null;
   }
 }
 

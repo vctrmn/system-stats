@@ -17,7 +17,7 @@ export default async function Home() {
               ["Hostname", systemInfo.os.hostname()],
               ["Platform", systemInfo.os.platform()],
               ["Architecture", systemInfo.os.arch()],
-              ["CPU Temperature", `${(systemInfo.cpuTemp ?? 0).toFixed(1)}°C`],
+              ["CPU Temperature", systemInfo.cpuTemp === null ? "N/A" : `${systemInfo.cpuTemp.toFixed(1)}°C`],
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{label}:</span>
