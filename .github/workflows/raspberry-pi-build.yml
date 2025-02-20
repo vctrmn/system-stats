@@ -60,10 +60,11 @@ jobs:
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} next build
 
+      - name: Verify output directory
+        run: ls -la
+
       - name: Package release
-        run: |
-          cd out
-          tar -czf ../release.tar.gz .
+        run: tar -czf release.tar.gz out/
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -75,7 +76,11 @@ jobs:
             Release ${{ github.ref_name }}
 
             To deploy on your Raspberry Pi:
-            1. Create a new directory and extract release.tar.gz into it
+            1. Extract release.tar.gz:
+               ```bash
+               tar xzf release.tar.gz
+               cd out
+               ```
             2. Install serve or similar static file server:
                ```bash
                npm install -g serve
